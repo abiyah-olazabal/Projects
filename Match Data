@@ -1,0 +1,60 @@
+Sub TMS()
+
+    Dim selectedFile As String
+    Dim targetWorkbook As Workbook
+    Dim currentWorkbook As Workbook
+    Dim lastRow As Long, nCol As Long, nFolio As Long
+    
+    
+    Set currentWorkbook = ActiveWorkbook
+    ' Abrir cuadro de diálogo para seleccionar un archivo CSV
+    selectedFile = Application.GetOpenFilename(, , , "Selecciona el archivo de TMS")
+    
+    ' Comprobar si el usuario ha seleccionado un archivo
+    If selectedFile = "Falso" Or selectedFile = "" Then Exit Sub
+    
+    ' Abrir el archivo seleccionado
+    
+    Set targetWorkbook = Workbooks.Open(selectedFile)
+    
+    
+    ' Realizar operaciones en el archivo seleccionado
+    With targetWorkbook.Sheets(1).Columns("A:A")
+        .TextToColumns Destination:=.Range("A1"), DataType:=xlDelimited, _
+            TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=True, _
+            Semicolon:=False, Comma:=True, Space:=False, Other:=False, FieldInfo _
+            :=Array(Array(1, 1), Array(2, 1), Array(3, 1), Array(4, 1), Array(5, 1), Array(6, 1), _
+            Array(7, 1), Array(8, 1)), TrailingMinusNumbers:=True
+    End With
+    
+    With currentWorkbook.Worksheets("Data")
+        'Dim lastRow As Long
+        lastRow = .Cells(.Rows.Count, "C").End(xlUp).Row - 3
+        
+        For i = 1 To 999
+            If .Cells(3, i).Value = "NFOLIO" Then
+                nFolio = i
+            End If
+            If .Cells(3, i).Value = "TMS" Then
+                nCol = i
+                Exit For
+            End If
+        Next i
+    .Range(.Range("A3").Offset(1, nCol - 1), .Range("A3").Offset(lastRow, nCol - 1)).Clear
+    
+    
+        .Range("A3").Offset(1, nCol - 1).FormulaR1C1 = _
+            "=IFERROR(VLOOKUP(RC[-" & nCol - nFolio & "],'" & targetWorkbook.Name & "'!C2:C28,27,0),""--"")"
+        .Range("A3").Offset(1, nCol - 1).AutoFill Destination:=.Range(.Range("A3").Offset(1, nCol - 1), .Range("A3").Offset(lastRow, nCol - 1))
+        .Range(.Range("A3").Offset(1, nCol - 1), .Range("A3").Offset(lastRow, nCol - 1)).Copy
+        .Range(.Range("A3").Offset(1, nCol - 1), .Range("A3").Offset(lastRow, nCol - 1)) _
+        .PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+            :=False, Transpose:=False
+        '.Range("J4").Select
+        Application.CutCopyMode = False
+    
+    End With
+    'Cierra el archivo seleccionado
+    targetWorkbook.Close SaveChanges:=False
+    
+End Sub
