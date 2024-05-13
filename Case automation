@@ -1,0 +1,90 @@
+Sub CerrarCasos()
+    Dim nuevoLibro As Workbook
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long, contador As Long
+    
+    ' Establecer la hoja de trabajo
+    Set ws = ThisWorkbook.Sheets("Data") ' Reemplaza con el nombre de tu hoja
+    
+    ' Encontrar la última fila con datos en la columna A
+    lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row
+    
+    ' Declarar arrays
+    Dim Caso() As Variant, ID() As Variant, TiCorp() As Variant
+    Dim nCaso As Byte, nID As Byte, nEstado As Byte, nTiCorp As Byte
+    ' Inicializar contadores
+    contador = 0
+
+    With ws
+        'Dim lastRow As Long
+        
+        For i = 1 To 999
+            If .Cells(3, i).Value = "ESTADO SRX" Then
+                nEstado = i
+            End If
+            If .Cells(3, i).Value = "CASO" Then
+                nCaso = i
+            End If
+            If .Cells(3, i).Value = "ID CASO" Then
+                nID = i
+            'Exit For
+            End If
+            If .Cells(3, i).Value = "STS ENVÍO" Then
+                nTiCorp = i
+            'Exit For
+            End If
+        Next i
+
+    ' Recorrer las filas
+    For i = 1 To lastRow
+        If (ws.Cells(i, nEstado).Value = "Anulado/NCRD" Or ws.Cells(i, nEstado).Value = "Entrega Total") And _
+        ws.Cells(i, nCaso).Value <> "--" Then
+            
+            ReDim Preserve Caso(0 To contador)
+            Caso(contador) = ws.Cells(i, nCaso).Value
+            ReDim Preserve ID(0 To contador)
+            ID(contador) = ws.Cells(i, nID).Value
+            ReDim Preserve TiCorp(0 To contador)
+            TiCorp(contador) = ws.Cells(i, nTiCorp).Value & ": Se valida estado Anulado/Entrega total"
+            contador = contador + 1
+        End If
+    Next i
+    End With
+    
+    ' Crear un nuevo libro
+    Set nuevoLibro = Workbooks.Add
+    
+    ' Cambiar el nombre de la primera hoja a "Creación"
+    nuevoLibro.Sheets(1).Name = "Cierre - Cancelación"
+    
+    ' Trabajar con el nuevo libro
+    With nuevoLibro.Sheets("Cierre - Cancelación")
+        .Range("A1").Value = "Id caso"
+        .Range("B1").Value = "TIpo Operación"
+        .Range("B2").Value = "Procede"
+        .Range("C1").Value = "Nro caso"
+        .Range("D1").Value = "Estado"
+        .Range("D2").Value = "Closed"
+        .Range("D2").NumberFormat = "@"
+        .Range("E1").Value = "OwnerID"
+        .Range("E2").Value = "005Uo000000J18TIAS"
+        .Range("F1").Value = "Comentario de cierre"
+        '.Range("F2").Value = "Se valida estado Anulado/Entrega total"
+        .Range("G1").Value = "Motivo de requerimiento"
+        .Range("A1:G1").AutoFilter
+        
+        'Pegar valores
+        .Range("A2").Resize(UBound(ID) + 1, 1).Value = Application.Transpose(ID)
+        .Range("C2").Resize(UBound(Caso) + 1, 1).Value = Application.Transpose(Caso)
+        .Range("F2").Resize(UBound(TiCorp) + 1, 1).Value = Application.Transpose(TiCorp)
+        
+        'Hacer el autofill
+        On Error Resume Next
+        .Range("B2").AutoFill Destination:=Range("B2:B" & contador + 1&)
+        .Range("D2:E2").AutoFill Destination:=Range("D2:E" & contador + 1&)
+        .Columns("A:G").RemoveDuplicates Columns:=3, Header:=xlYes
+
+    End With
+
+End Sub
